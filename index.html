@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+    <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+    <title>MindTask AI</title>
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/tailwindcss/2.2.19/tailwind.min.css"/>
+    <style>
+        :root {
+            --primary: #135bec;
+            --bg-light: #f6f6f8;
+            --bg-dark: #101622;
+            --header-light: rgba(255,255,255,0.95);
+            --header-dark: rgba(16,22,34,0.95);
+            --bottom-light: #ffffff;
+            --bottom-dark: #0f172a;
+            --card-dark: #1e293b;
+            --input-light: #f1f5f9;
+            --input-dark: #1e293b;
+            --border-light: #e2e8f0;
+            --border-dark: #1e293b;
+            --text-light: #0f172a;
+            --text-dark: #e2e8f0;
+            --text-secondary-light: #64748b;
+            --text-secondary-dark: #94a3b8;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior: none;
+            margin: 0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* ===== Theme variables applied via data attribute ===== */
+        [data-theme="light"] {
+            --bg: var(--bg-light);
+            --header-bg: var(--header-light);
+            --bottom-bg: var(--bottom-light);
+            --card-hover: #ffffff;
+            --input-bg: var(--input-light);
+            --border: var(--border-light);
+            --text: var(--text-light);
+            --text-secondary: var(--text-secondary-light);
+            --empty-border: #e2e8f0;
+            --toast-bg: rgba(19,91,236,0.05);
+        }
+        [data-theme="dark"] {
+            --bg: var(--bg-dark);
+            --header-bg: var(--header-dark);
+            --bottom-bg: var(--bottom-dark);
+            --card-hover: var(--card-dark);
+            --input-bg: var(--input-dark);
+            --border: var(--border-dark);
+            --text: var(--text-dark);
+            --text-secondary: var(--text-secondary-dark);
+            --empty-border: #334155;
+            --toast-bg: rgba(19,91,236,0.15);
+        }
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+        }
+
+        .bg-primary { background-color: var(--primary); }
+        .text-primary { color: var(--primary); }
+        .bg-primary-10 { background-color: rgba(19,91,236,0.1); }
+        .bg-primary-15 { background-color: rgba(19,91,236,0.15); }
+        
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+
+        .icon-svg { width: 20px; height: 20px; display: inline-block; vertical-align: middle; }
+        .icon-svg-sm { width: 16px; height: 16px; }
+        .icon-svg-lg { width: 24px; height: 24px; }
+        
+        .site-header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background-color: var(--header-bg);
+            border-bottom: 1px solid var(--border);
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: var(--bottom-bg);
+            border-top: 1px solid var(--border);
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        .input-wrap {
+            height: 44px;
+            background: var(--input-bg);
+            border-radius: 9999px;
+            padding: 0 16px;
+            border: 1px solid var(--border);
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        .input-wrap input {
+            background: transparent;
+            border: none;
+            outline: none;
+            height: 100%;
+            color: var(--text);
+            width: 100%;
+        }
+        .toast-wrap {
+            background: var(--toast-bg);
+            transition: background-color 0.3s;
+        }
+        
+        @media (max-width: 640px) {
+            .header-title { font-size: 16px; }
+            .tab-scroll { 
+                overflow-x: auto;
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+            .tab-scroll::-webkit-scrollbar { display: none; }
+            .tab-item { 
+                white-space: nowrap;
+                padding-left: 12px;
+                padding-right: 12px;
+                font-size: 13px;
+            }
+            .main-content { padding-top: 8px; padding-bottom: 120px; }
+            .page-title { font-size: 24px; }
+        }
+        
+        @media (min-width: 641px) {
+            .main-content { padding-bottom: 140px; }
+        }
+        
+        .task-item { 
+            touch-action: pan-x;
+            transition: background 0.2s;
+            border-radius: 12px;
+            padding: 12px 8px;
+        }
+        .task-item:hover {
+            background: var(--card-hover);
+        }
+        
+        .group-header { position: sticky; top: 0; z-index: 5; }
+        .group-section + .group-section { margin-top: 24px; }
+        .current-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 1px 8px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        
+        .task-checkbox {
+            width: 20px; height: 20px;
+            border-radius: 6px;
+            border: 2px solid var(--text-secondary);
+            appearance: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+            position: relative;
+            background: transparent;
+            transition: all 0.2s;
+        }
+        .task-checkbox:checked {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+        .task-checkbox:checked::after {
+            content: '';
+            position: absolute;
+            left: 5px; top: 2px;
+            width: 6px; height: 10px;
+            border: solid white;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+        
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .animate-spin { animation: spin 1s linear infinite; }
+        
+        .tab-item {
+            text-decoration: none;
+            border-bottom: 2px solid transparent;
+            color: var(--text-secondary);
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        .tab-active { 
+            color: var(--primary) !important; 
+            border-bottom-color: var(--primary) !important; 
+            font-weight: 600; 
+        }
+
+        /* User dropdown */
+        .user-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 8px;
+            background: var(--header-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 6px;
+            min-width: 160px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            z-index: 100;
+            display: none;
+        }
+        .user-dropdown.show { display: block; }
+        .user-dropdown a {
+            display: block;
+            padding: 10px 14px;
+            font-size: 14px;
+            color: var(--text);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: background 0.15s;
+        }
+        .user-dropdown a:hover { background: var(--input-bg); }
+        .user-dropdown .logout-btn { color: #ef4444; }
+    </style>
+</head>
+<body data-theme="light" class="min-h-screen flex flex-col">
+    <!-- Top Navigation -->
+    <header class="site-header">
+        <div class="max-w-3xl mx-auto px-4 md:px-6 flex items-center justify-between" style="height:56px;">
+            <div class="flex items-center gap-2">
+                <div class="bg-primary text-white flex items-center justify-center" style="padding:6px; border-radius:8px;">
+                    <svg class="icon-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M5 3l3.5 7L5 17l14-7L5 3z"/></svg>
+                </div>
+                <h1 class="font-bold header-title" style="letter-spacing:-0.02em;">MindTask AI</h1>
+            </div>
+            <div class="flex items-center gap-2 md:gap-4">
+                <button id="themeToggle" class="rounded-full" style="padding:8px; background:none; border:none; cursor:pointer;">
+                    <svg id="themeIcon" class="icon-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>
+                </button>
+                <!-- User Avatar & Dropdown -->
+                <div style="position:relative;">
+                    <button id="userBtn" class="bg-primary-10 flex items-center justify-center overflow-hidden" style="width:32px;height:32px;border-radius:50%;border:1px solid rgba(19,91,236,0.2);cursor:pointer;background:rgba(19,91,236,0.1);">
+                        <span id="userAvatar" style="font-size:14px;font-weight:600;color:var(--primary);"></span>
+                    </button>
+                    <div class="user-dropdown" id="userDropdown">
+                        <div style="padding:10px 14px 6px;border-bottom:1px solid var(--border);margin-bottom:4px;">
+                            <div style="font-size:14px;font-weight:600;" id="dropdownName"></div>
+                            <div style="font-size:12px;color:var(--text-secondary);" id="dropdownUsername"></div>
+                        </div>
+                        <a href="#" class="logout-btn" onclick="handleLogout(event)">退出登录</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tabs -->
+        <div class="max-w-3xl mx-auto px-2 md:px-6">
+            <div class="flex justify-start md:justify-center gap-1 md:gap-8 tab-scroll" style="padding:4px 0;">
+                <a class="tab-item tab-active py-3 md:py-4 text-xs md:text-sm" href="#" data-tab="today">Today</a>
+                <a class="tab-item py-3 md:py-4 text-xs md:text-sm" href="#" data-tab="week">Week</a>
+                <a class="tab-item py-3 md:py-4 text-xs md:text-sm" href="#" data-tab="month">Month</a>
+                <a class="tab-item py-3 md:py-4 text-xs md:text-sm" href="#" data-tab="year">Year</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-3xl w-full mx-auto px-4 md:px-6 main-content">
+        <div class="mb-4 md:mb-8 flex items-baseline justify-between" style="margin-top:16px;">
+            <div>
+                <h2 class="text-2xl md:text-3xl font-bold page-title" id="pageTitle" style="letter-spacing:-0.02em;">Today</h2>
+                <p class="mt-1 text-sm" id="pageDate" style="color:var(--text-secondary);">Loading...</p>
+            </div>
+            <span class="text-xs md:text-sm font-medium text-primary bg-primary-10" id="taskCount" style="padding:4px 12px; border-radius:9999px;">0 left</span>
+        </div>
+
+        <div id="taskList"></div>
+
+        <!-- Empty state -->
+        <div class="text-center hidden" id="emptyState" style="margin-top:48px; padding:48px 16px; border:2px dashed var(--empty-border); border-radius:16px;">
+            <div style="font-size:32px; margin-bottom:8px;">✨</div>
+            <p class="text-sm" style="color:var(--text-secondary);">跟 AI 聊聊你的计划，自动整理成待办</p>
+        </div>
+    </main>
+
+    <!-- Bottom Input Bar -->
+    <div class="bottom-bar pb-safe">
+        <div class="max-w-3xl mx-auto px-4" style="padding-top:10px; padding-bottom:10px;">
+            <!-- AI Response Toast -->
+            <div id="aiResponse" class="hidden toast-wrap" style="margin-bottom:10px; padding:12px; border-radius:12px;">
+                <div class="flex items-start gap-2">
+                    <div class="bg-primary text-white flex-shrink-0 flex items-center justify-center" style="padding:4px; border-radius:8px;">
+                        <svg class="icon-svg-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M5 3l3.5 7L5 17l14-7L5 3z"/></svg>
+                    </div>
+                    <p class="text-sm" id="responseText" style="color:var(--text); line-height:1.4;"></p>
+                </div>
+            </div>
+
+            <!-- Input Row -->
+            <div class="flex items-center gap-2">
+                <button id="aiBtn" class="flex-shrink-0 bg-primary-15 flex items-center justify-center" style="width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;transition:transform 0.1s;" onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">
+                    <svg class="icon-svg" fill="none" viewBox="0 0 24 24" stroke="var(--primary)" stroke-width="2"><path d="M5 3l3.5 7L5 17l14-7L5 3z"/></svg>
+                </button>
+
+                <div class="flex-1 flex items-center input-wrap">
+                    <input 
+                        id="taskInput"
+                        placeholder="说点什么，AI 帮你整理待办..." 
+                        type="text"
+                        class="text-sm font-medium"
+                    />
+                </div>
+
+                <button class="flex-shrink-0 flex items-center justify-center" id="sendBtn" style="width:40px;height:40px;border-radius:50%;border:none;background:transparent;cursor:pointer;transition:transform 0.1s;" onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">
+                    <svg id="sendIcon" class="icon-svg" fill="none" viewBox="0 0 24 24" stroke="var(--primary)" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4L22 2z"/></svg>
+                    <svg id="loadingIcon" class="icon-svg animate-spin" style="display:none;" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="var(--primary)" stroke-width="2.5" fill="none" stroke-dasharray="31.4 31.4" stroke-linecap="round"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========================
+        // State
+        // ========================
+        let tasks = [];
+        let currentTab = 'today';
+        let isAiMode = false;
+        let currentUser = null;
+
+        const weekdaysFull = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const monthShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        const ICONS = {
+            delete: '<svg style="width:20px;height:20px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>'
+        };
+
+        // ========================
+        // API helper: auto-redirect on 401
+        // ========================
+        async function apiFetch(url, options = {}) {
+            const res = await fetch(url, options);
+            if (res.status === 401) {
+                window.location.href = '/login';
+                throw new Error('Unauthorized');
+            }
+            return res;
+        }
+
+        // ========================
+        // Date Utility
+        // ========================
+        function getToday() {
+            const now = new Date();
+            return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        }
+        function parseDate(str) {
+            if (!str) return getToday();
+            const parts = str.split('-');
+            return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        }
+        function getWeekSunday(d) {
+            return new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay());
+        }
+        function getWeekKey(d) {
+            const sun = getWeekSunday(d);
+            return `${sun.getFullYear()}-${String(sun.getMonth()+1).padStart(2,'0')}-${String(sun.getDate()).padStart(2,'0')}`;
+        }
+        function getMonthKey(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+        function getYearKey(d) { return `${d.getFullYear()}`; }
+        function formatWeekLabel(sun) {
+            const sat = new Date(sun); sat.setDate(sat.getDate() + 6);
+            return `${monthShort[sun.getMonth()]} ${sun.getDate()} - ${monthShort[sat.getMonth()]} ${sat.getDate()}`;
+        }
+        function formatMonthLabel(d) { return `${monthNames[d.getMonth()]} ${d.getFullYear()}`; }
+        function formatYearLabel(d) { return `${d.getFullYear()}`; }
+
+        // ========================
+        // Initialize
+        // ========================
+        document.addEventListener('DOMContentLoaded', async () => {
+            applyTheme();
+            await loadUserInfo();
+            await loadTasks();
+            updateDate();
+            setupEventListeners();
+        });
+
+        // ========================
+        // User Info
+        // ========================
+        async function loadUserInfo() {
+            try {
+                const res = await apiFetch('/api/me');
+                currentUser = await res.json();
+                const avatar = document.getElementById('userAvatar');
+                const name = currentUser.display_name || currentUser.username;
+                avatar.textContent = name.charAt(0).toUpperCase();
+                document.getElementById('dropdownName').textContent = name;
+                document.getElementById('dropdownUsername').textContent = '@' + currentUser.username;
+            } catch (e) {
+                // redirect handled by apiFetch
+            }
+        }
+
+        // User dropdown
+        document.getElementById('userBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('userDropdown').classList.toggle('show');
+        });
+        document.addEventListener('click', () => {
+            document.getElementById('userDropdown').classList.remove('show');
+        });
+
+        async function handleLogout(e) {
+            e.preventDefault();
+            await fetch('/api/logout', { method: 'POST' });
+            window.location.href = '/login';
+        }
+
+        // ========================
+        // Theme (fixed!)
+        // ========================
+        function getTheme() {
+            if (localStorage.theme === 'dark') return 'dark';
+            if (localStorage.theme === 'light') return 'light';
+            return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+
+        function applyTheme() {
+            const theme = getTheme();
+            document.body.setAttribute('data-theme', theme);
+            updateThemeIcon(theme);
+        }
+
+        function toggleTheme() {
+            const current = getTheme();
+            const next = current === 'dark' ? 'light' : 'dark';
+            localStorage.theme = next;
+            document.body.setAttribute('data-theme', next);
+            updateThemeIcon(next);
+        }
+
+        function updateThemeIcon(theme) {
+            const el = document.getElementById('themeIcon');
+            if (theme === 'dark') {
+                el.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+                el.setAttribute('stroke', '#94a3b8');
+            } else {
+                el.innerHTML = '<path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/>';
+                el.setAttribute('stroke', '#64748b');
+            }
+        }
+
+        document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+        // ========================
+        // Date Display
+        // ========================
+        function updateDate() {
+            const now = new Date();
+            const el = document.getElementById('pageDate');
+            switch(currentTab) {
+                case 'today':
+                    el.textContent = `${weekdaysFull[now.getDay()]}, ${monthShort[now.getMonth()]} ${now.getDate()}`;
+                    break;
+                case 'week': {
+                    const sun = getWeekSunday(now);
+                    const sat = new Date(sun); sat.setDate(sat.getDate() + 6);
+                    el.textContent = `${monthShort[sun.getMonth()]} ${sun.getDate()} - ${monthShort[sat.getMonth()]} ${sat.getDate()}`;
+                    break;
+                }
+                case 'month':
+                    el.textContent = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+                    break;
+                case 'year':
+                    el.textContent = `${now.getFullYear()}`;
+                    break;
+            }
+        }
+
+        // ========================
+        // Tab Switching
+        // ========================
+        document.querySelectorAll('[data-tab]').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                e.preventDefault();
+                switchTab(tab.dataset.tab);
+            });
+        });
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('[data-tab]').forEach(t => {
+                t.classList.remove('tab-active');
+            });
+            document.querySelector(`[data-tab="${tab}"]`).classList.add('tab-active');
+            
+            const titles = { today: 'Today', week: 'Week', month: 'Month', year: 'Year' };
+            document.getElementById('pageTitle').textContent = titles[tab];
+            updateDate();
+            renderTasks();
+        }
+
+        // ========================
+        // Load Tasks
+        // ========================
+        async function loadTasks() {
+            try {
+                const res = await apiFetch('/api/tasks');
+                tasks = await res.json();
+                renderTasks();
+            } catch (err) {
+                console.error('Failed to load tasks:', err);
+            }
+        }
+
+        // ========================
+        // Render Tasks with Grouping
+        // ========================
+        function renderTasks() {
+            const container = document.getElementById('taskList');
+            const emptyState = document.getElementById('emptyState');
+            const today = getToday();
+            
+            if (currentTab === 'today') {
+                const todayTasks = tasks.filter(t => {
+                    const dd = parseDate(t.due_date || (t.created_at ? t.created_at.split(' ')[0] : null));
+                    return dd.getTime() === today.getTime();
+                });
+                if (todayTasks.length === 0) {
+                    container.innerHTML = '';
+                    emptyState.classList.remove('hidden');
+                    document.getElementById('taskCount').textContent = '0 left';
+                    return;
+                }
+                emptyState.classList.add('hidden');
+                document.getElementById('taskCount').textContent = `${todayTasks.filter(t => !t.completed).length} left`;
+                container.innerHTML = todayTasks.map(t => renderTaskItem(t)).join('');
+                return;
+            }
+
+            let groups;
+            if (currentTab === 'week') groups = groupBy(tasks, today, getWeekKey, getWeekSunday, formatWeekLabel, d => getWeekSunday(d));
+            else if (currentTab === 'month') groups = groupBy(tasks, today, getMonthKey, d => new Date(d.getFullYear(), d.getMonth(), 1), formatMonthLabel, d => new Date(d.getFullYear(), d.getMonth(), 1));
+            else groups = groupBy(tasks, today, getYearKey, d => new Date(d.getFullYear(), 0, 1), formatYearLabel, d => new Date(d.getFullYear(), 0, 1));
+
+            if (groups.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                document.getElementById('taskCount').textContent = '0 left';
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            const allTasks = groups.flatMap(g => g.tasks);
+            document.getElementById('taskCount').textContent = `${allTasks.filter(t => !t.completed).length} left`;
+
+            container.innerHTML = groups.map(g => `
+                <div class="group-section">
+                    <div class="group-header flex items-center gap-2 py-2 mb-1">
+                        <h3 class="text-sm font-semibold">${g.label}</h3>
+                        ${g.isCurrent ? '<span class="current-badge bg-primary-15 text-primary">当前</span>' : ''}
+                        <span class="text-xs ml-auto" style="color:var(--text-secondary);">${g.tasks.filter(t => !t.completed).length} 项待办</span>
+                    </div>
+                    <div>${g.tasks.map(t => renderTaskItem(t)).join('')}</div>
+                </div>
+            `).join('');
+        }
+
+        function groupBy(taskList, today, keyFn, startFn, labelFn, sortStartFn) {
+            const currentKey = keyFn(today);
+            const currentStart = startFn(today);
+            const filtered = taskList.filter(t => {
+                const dd = parseDate(t.due_date || (t.created_at ? t.created_at.split(' ')[0] : null));
+                return sortStartFn(dd) >= currentStart;
+            });
+            if (filtered.length === 0) return [];
+            const map = {};
+            filtered.forEach(t => {
+                const dd = parseDate(t.due_date || (t.created_at ? t.created_at.split(' ')[0] : null));
+                const key = keyFn(dd);
+                if (!map[key]) map[key] = { key, sortDate: sortStartFn(dd), label: labelFn(sortStartFn(dd)), isCurrent: key === currentKey, tasks: [] };
+                map[key].tasks.push(t);
+            });
+            return Object.values(map).sort((a, b) => {
+                if (a.isCurrent && !b.isCurrent) return -1;
+                if (!a.isCurrent && b.isCurrent) return 1;
+                return a.sortDate - b.sortDate;
+            });
+        }
+
+        // ========================
+        // Render Single Task Item
+        // ========================
+        function renderTaskItem(task) {
+            const dueDateStr = task.due_date ? formatDueDate(task.due_date) : '';
+            const priorityBadge = task.priority === 'high' 
+                ? '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#ef4444;margin-right:6px;"></span>'
+                : task.priority === 'low'
+                ? '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--text-secondary);margin-right:6px;"></span>'
+                : '';
+            
+            return `
+                <div class="flex items-center gap-3 md:gap-4 task-item" data-id="${task.id}">
+                    <input ${task.completed ? 'checked' : ''} class="task-checkbox" type="checkbox" onchange="toggleTask(${task.id})"/>
+                    <div class="flex-1" style="min-width:0;">
+                        <p class="text-sm md:text-base font-medium" style="line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; ${task.completed ? 'color:var(--text-secondary); text-decoration:line-through;' : ''}">${escapeHtml(task.title)}</p>
+                        <p class="text-xs flex items-center" style="color:var(--text-secondary); margin-top:2px;">
+                            ${priorityBadge}${dueDateStr ? `<span>${dueDateStr}</span>` : ''}
+                        </p>
+                    </div>
+                    <button class="del-btn" onclick="deleteTask(${task.id})" style="opacity:0; padding:8px; color:var(--text-secondary); background:none; border:none; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.color='#ef4444';this.style.opacity='1'" onmouseout="this.style.color='var(--text-secondary)';this.style.opacity='0'">
+                        ${ICONS.delete}
+                    </button>
+                </div>
+            `;
+        }
+
+        function formatDueDate(dateStr) {
+            const d = parseDate(dateStr);
+            const today = getToday();
+            const diff = Math.round((d - today) / (24*60*60*1000));
+            if (diff === 0) return '今天';
+            if (diff === 1) return '明天';
+            if (diff === -1) return '昨天';
+            if (diff > 1 && diff <= 7) return weekdaysFull[d.getDay()];
+            return `${monthShort[d.getMonth()]} ${d.getDate()}`;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ========================
+        // Task Actions
+        // ========================
+        async function toggleTask(id) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.completed = !task.completed;
+                await apiFetch(`/api/tasks/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ completed: task.completed })
+                });
+                renderTasks();
+            }
+        }
+
+        async function deleteTask(id) {
+            await apiFetch(`/api/tasks/${id}`, { method: 'DELETE' });
+            tasks = tasks.filter(t => t.id !== id);
+            renderTasks();
+        }
+
+        // ========================
+        // Event Listeners
+        // ========================
+        function setupEventListeners() {
+            const input = document.getElementById('taskInput');
+            const sendBtn = document.getElementById('sendBtn');
+            const aiBtn = document.getElementById('aiBtn');
+            
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendMessage();
+            });
+            sendBtn.addEventListener('click', sendMessage);
+            aiBtn.addEventListener('click', () => {
+                isAiMode = !isAiMode;
+                input.placeholder = isAiMode ? "跟 AI 说说你要做什么..." : "说点什么，AI 帮你整理待办...";
+                aiBtn.style.background = isAiMode ? 'rgba(19,91,236,0.3)' : 'rgba(19,91,236,0.15)';
+                input.focus();
+            });
+        }
+
+        // ========================
+        // Send Message
+        // ========================
+        async function sendMessage() {
+            const input = document.getElementById('taskInput');
+            const sendBtn = document.getElementById('sendBtn');
+            const sendIcon = document.getElementById('sendIcon');
+            const loadingIcon = document.getElementById('loadingIcon');
+            const message = input.value.trim();
+            if (!message) return;
+            
+            sendBtn.disabled = true;
+            sendBtn.style.opacity = '0.4';
+            sendIcon.style.display = 'none';
+            loadingIcon.style.display = 'block';
+            
+            try {
+                const res = await apiFetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+                const data = await res.json();
+                
+                const aiResponse = document.getElementById('aiResponse');
+                document.getElementById('responseText').textContent = data.reply;
+                aiResponse.classList.remove('hidden');
+                setTimeout(() => aiResponse.classList.add('hidden'), 5000);
+                
+                await loadTasks();
+                input.value = '';
+            } catch (err) {
+                console.error('Failed to send message:', err);
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.style.opacity = '1';
+                sendIcon.style.display = 'block';
+                loadingIcon.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
